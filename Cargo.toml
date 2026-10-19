@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "core",
+    "linux/backend",
+    "linux/daemon",
+    "linux/cli",
+]
+resolver = "2"

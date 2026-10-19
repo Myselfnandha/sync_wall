@@ -1,0 +1,16 @@
+/target
+**/*.rs.bk
+*.tmp
+test_wallpaper.png
+
+# Android build outputs
+.gradle/
+build/
+android/.gradle/
+android/build/
+android/app/build/
+*.apk
+*.aab
+local.properties
+.idea/
+*.iml

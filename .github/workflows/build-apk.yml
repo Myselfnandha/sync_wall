@@ -1,0 +1,84 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "master", "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Android APK & Native Core
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Locate Android NDK
+        id: setup-ndk
+        run: |
+          # Detect installed NDK in GitHub Runner or install latest
+          if [ -d "$ANDROID_HOME/ndk" ]; then
+            NDK_PATH=$(ls -d $ANDROID_HOME/ndk/* | tail -n 1)
+            echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+            echo "Found NDK at $NDK_PATH"
+          else
+            echo "Installing NDK via sdkmanager..."
+            $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;26.3.11579264"
+            echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+          fi
+
+      - name: Build Rust core for Android (aarch64, armv7, x86_64)
+        run: |
+          mkdir -p android/app/src/main/jniLibs
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 \
+            -o android/app/src/main/jniLibs \
+            build -p sync_wall_core --no-default-features --release
+
+      - name: Generate UniFFI Kotlin Bindings
+        run: |
+          cargo run -p sync_wall_core --bin uniffi-bindgen -- \
+            generate target/x86_64-linux-android/release/libsync_wall_core.so \
+            --library --language kotlin --out-dir android/app/src/main/java/ --no-format
+
+      - name: Make Gradle Wrapper Executable
+        run: chmod +x android/gradlew
+
+      - name: Build Android APK (Debug & Release)
+        run: |
+          cd android
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-wall-app-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Create GitHub Release on Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/debug/*.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true

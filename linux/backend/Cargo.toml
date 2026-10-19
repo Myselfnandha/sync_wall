@@ -1,0 +1,10 @@
+[package]
+name = "sync_wall_backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sync_wall_core = { path = "../../core" }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+tracing = "0.1"
