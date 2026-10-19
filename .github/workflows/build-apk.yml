@@ -50,7 +50,7 @@ jobs:
       - name: Build Rust core for Android (aarch64, armv7, x86_64)
         run: |
           mkdir -p android/app/src/main/jniLibs
-          cargo-ndk -t arm64-v8a -t armeabi-v7a -t x86_64 --platform 26 \
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -P 26 \
             -o android/app/src/main/jniLibs \
             build --package sync_wall_core --no-default-features --release
 
