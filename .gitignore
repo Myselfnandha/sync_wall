@@ -14,3 +14,4 @@ android/app/build/
 local.properties
 .idea/
 *.iml
+build-artifacts/
